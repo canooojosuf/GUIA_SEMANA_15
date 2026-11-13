@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Tienda - TaskBoard</title>
+</head>
+
+<body>
+    <h1>Panel de Tienda en Línea</h1>
+
+    <div id="login-section">
+        <form id="login-form">
+            <input id="email" type="email" value="ana@taskboard.test" required>
+            <input id="password" type="password" value="password123" required>
+            <button type="submit">Entrar</button>
+        </form>
+    </div>
+
+    <div id="app-section" style="display:none;">
+        <button id="logout-btn">Salir</button>
+        <h3>Mis Comercios y Transacciones Completadas</h3>
+        <p id="estado"></p>
+        <ul id="lista"></ul>
+    </div>
+
+    <script>
+        const base = '/api';
+        let token = null;
+
+        const loginForm = document.getElementById('login-form');
+        const loginSection = document.getElementById('login-section');
+        const appSection = document.getElementById('app-section');
+        const logoutBtn = document.getElementById('logout-btn');
+        const estado = document.getElementById('estado');
+        const lista = document.getElementById('lista');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const r = await fetch(base + '/login', {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: document.getElementById('email').value,
+                    password: document.getElementById('password').value,
+                    dispositivo: 'cliente-web-panel'
+                })
+            });
+
+            if (r.status !== 201) {
+                estado.textContent = 'Credenciales incorrectas (' + r.status + ')';
+                return;
+            }
+
+            token = (await r.json()).token;
+            loginSection.style.display = 'none';
+            appSection.style.display = 'block';
+            cargarPanel();
+        });
+
+        async function cargarPanel() {
+            // 1. Obtener comercios
+            const rCom = await fetch(base + '/comercios', {
+                headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + token }
+            });
+
+            if (rCom.status === 401) {
+                cerrarSesionForzada();
+                return;
+            }
+
+            // 2. Obtener transacciones completadas
+            const rTx = await fetch(base + '/transacciones?estado=Completada', {
+                headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + token }
+            });
+
+            if (rTx.status === 401) {
+                cerrarSesionForzada();
+                return;
+            }
+
+            const comercios = (await rCom.json()).data;
+            const transacciones = (await rTx.json()).data;
+
+            // Agrupar transacciones completadas por comercio_id
+            const conteoCompletadas = {};
+            transacciones.forEach(tx => {
+                conteoCompletadas[tx.comercio_id] = (conteoCompletadas[tx.comercio_id] || 0) + 1;
+            });
+
+            lista.replaceChildren();
+            comercios.forEach(c => {
+                const completadas = conteoCompletadas[c.id] || 0;
+                const li = document.createElement('li');
+                li.textContent = `${c.nombre} (${c.rubro ?? 'Sin rubro'}) - Transacciones Completadas: ${completadas}`;
+                lista.appendChild(li);
+            });
+
+            estado.textContent = `Total comercios cargados: ${comercios.length}`;
+        }
+
+        logoutBtn.addEventListener('click', async () => {
+            await fetch(base + '/logout', {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + token }
+            });
+            cerrarSesionForzada();
+        });
+
+        function cerrarSesionForzada() {
+            token = null;
+            appSection.style.display = 'none';
+            loginSection.style.display = 'block';
+            lista.replaceChildren();
+            estado.textContent = 'Sesión cerrada o vencida.';
+        }
+    </script>
+</body>
+
+</html>

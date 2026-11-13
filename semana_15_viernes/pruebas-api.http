@@ -1,0 +1,101 @@
+#@host = http://127.0.0.1:8000/api
+
+### 1. Listar comercios
+#GET {{host}}/comercios
+#Accept: application/json
+
+
+### 4. Crear con datos válidos
+#POST {{host}}/transacciones
+#Accept: application/json
+#Content-Type: application/json
+
+#{
+#    "comercio_id": 1,
+ #   "cliente_nombre": "Luis Mena",
+  #  "monto": 25.50,
+   # "estado": "Iniciada"
+#}
+
+### 5. Crear con datos inválidos
+#POST {{host}}/transacciones
+#Accept: application/json
+#Content-Type: application/json
+
+#{
+ #   "comercio_id": 1,
+  #  "monto": -5
+#}
+
+### 6. Eliminar
+#DELETE {{host}}/transacciones/1
+#Accept: application/json
+
+@host = http://127.0.0.1:8000/api
+
+### ==========================================
+### 0. PÚBLICAS / LOGINS
+### ==========================================
+
+# Login Ana
+# @name loginAna
+POST {{host}}/login 
+Accept: application/json 
+Content-Type: application/json 
+ 
+{ 
+  "email": "ana@taskboard.test", 
+  "password": "password123", 
+  "dispositivo": "pruebas-ana" 
+} 
+
+###
+
+# Login Carlos
+# @name loginCarlos
+POST {{host}}/login 
+Accept: application/json 
+Content-Type: application/json 
+ 
+{ 
+  "email": "carlos@taskboard.test", 
+  "password": "password123", 
+  "dispositivo": "pruebas-carlos" 
+} 
+
+
+### ==========================================
+### EXTRACCIÓN DE TOKENS
+### ==========================================
+@tokenAna = {{loginAna.response.body.token}}
+@tokenCarlos = {{loginCarlos.response.body.token}}
+
+
+### ==========================================
+### 1. ANA (Usando tokenAna)
+### ==========================================
+
+### Ver perfil de Ana (/yo)
+GET {{host}}/yo
+Accept: application/json
+Authorization: Bearer {{tokenAna}}
+
+### Listar comercios de Ana
+GET {{host}}/comercios
+Accept: application/json
+Authorization: Bearer {{tokenAna}}
+
+### Transacciones de Ana
+GET {{host}}/transacciones
+Accept: application/json
+Authorization: Bearer {{tokenAna}}
+
+
+### ==========================================
+### 2. CARLOS (Usando tokenCarlos)
+### ==========================================
+
+### Transacción 1 de Carlos
+GET {{host}}/transacciones/1
+Accept: application/json
+Authorization: Bearer {{tokenCarlos}}
